@@ -38,7 +38,7 @@ concurrency:
 jobs:
   version:
     name: Create version tag and GitHub Release
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.ref_name == 'main'
     steps:
       - uses: actions/checkout@v4

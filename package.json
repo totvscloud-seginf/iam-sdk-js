@@ -1,5 +1,8 @@
 {
   "name": "@totvs-cloud/iam-sdk",
+  "repository": {
+    "url": "https://github.com/totvscloud-seginf/iam-sdk-js"
+  },
   "version": "0.1.0",
   "description": "Framework-agnostic TypeScript SDK for TOTVS Cloud IAM.",
   "license": "MIT",

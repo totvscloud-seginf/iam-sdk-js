@@ -128,4 +128,4 @@ This package follows SemVer. The initial version is `0.1.0`; public API changes 
 
 Versioning is handled by the `Versioning` GitHub Actions workflow. Run it from the `main` branch and choose `current` for the first `0.1.0` deploy, or a SemVer bump (`patch`, `minor`, `major` or pre-release variants) for later releases. The `current` option tags the version already declared in `package.json`; bump options update `package.json` and `package-lock.json`. The workflow pushes a `vX.Y.Z` tag and creates a GitHub Release.
 
-Publishing to npm is handled by the `Release` workflow when a GitHub Release is published.
+Publishing to npm is handled by the `Release` workflow when a GitHub Release is published or when the `Versioning` workflow completes successfully. The `workflow_run` trigger is required because releases created with GitHub's default `GITHUB_TOKEN` do not trigger a second workflow from the `release` event. If a release already exists and did not publish, run `Release` manually with the existing tag, for example `v0.1.0`.

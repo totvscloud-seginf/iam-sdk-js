@@ -3,15 +3,61 @@ name: Release
 on:
   release:
     types: [published]
+  workflow_run:
+    workflows: ["Versioning"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish, for example v0.1.0"
+        required: true
+        type: string
 
 jobs:
   publish:
     runs-on: self-hosted
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     permissions:
+      actions: read
       contents: read
       id-token: write
     steps:
+      - name: Download release metadata
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: release-metadata
+          path: /tmp/release-metadata
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve release metadata
+        id: metadata
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          DISPATCH_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ "$EVENT_NAME" == "release" ]]; then
+            TAG="$RELEASE_TAG"
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            TAG="$DISPATCH_TAG"
+          else
+            # shellcheck disable=SC1091
+            source /tmp/release-metadata/release-metadata.env
+            TAG="$tag"
+          fi
+
+          if [[ -z "$TAG" ]]; then
+            echo "Unable to resolve release tag." >&2
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.metadata.outputs.tag }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22

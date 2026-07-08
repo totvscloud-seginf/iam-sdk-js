@@ -20,7 +20,7 @@ jobs:
     secrets:
       dtrack_x_api_key: ${{ secrets.DTRACK_X_API_KEY_PROD }}
     with:
-      project_id: #TODO-INCLUDE
+      project_id: d70a640f-0188-4e84-a0ba-0acc3015ff5a
       build_container: false
       build_submodules: false
       scan_ref: "package-lock.json"

@@ -1,11 +1,11 @@
-# Codex Instructions For `@tcloud/iam-sdk`
+# Codex Instructions For `@totvs-cloud/iam-sdk`
 
 These instructions are for AI agents and future maintainers working on this repository. Follow them before changing code.
 
 ## Project Context
 
 - This is the framework-agnostic TypeScript core SDK for TOTVS Cloud IAM frontends.
-- The package name is `@tcloud/iam-sdk`.
+- The package name is `@totvs-cloud/iam-sdk`.
 - The first supported scope is core SDK only. Do not add React, Angular, Vue or other framework adapters to this package.
 - The SDK mirrors the main behavior of `iam-sdk-python` (you may ask for project folder if needed context) while adapting authorization to the frontend BFF.
 - The frontend authorization RFC is `RFCs/text/0009-autorizacao-frontend-iam-cedar.md` (you may ask for project folder if needed context).

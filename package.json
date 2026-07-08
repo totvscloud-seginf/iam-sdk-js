@@ -1,5 +1,5 @@
 {
-  "name": "@tcloud/iam-sdk",
+  "name": "@totvs-cloud/iam-sdk",
   "version": "0.1.0",
   "description": "Framework-agnostic TypeScript SDK for TOTVS Cloud IAM.",
   "license": "MIT",

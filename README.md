@@ -1,4 +1,4 @@
-# @tcloud/iam-sdk
+# @totvs-cloud/iam-sdk
 
 Framework-agnostic TypeScript SDK for TOTVS Cloud IAM frontends.
 
@@ -7,13 +7,13 @@ This package is the core SDK only. React, Angular, Vue or other framework adapte
 ## Install
 
 ```bash
-npm install @tcloud/iam-sdk
+npm install @totvs-cloud/iam-sdk
 ```
 
 ## Create A Client
 
 ```ts
-import { IamClient } from "@tcloud/iam-sdk";
+import { IamClient } from "@totvs-cloud/iam-sdk";
 
 const iam = new IamClient({
   endpointAuthn: "https://iam.example.com/api",

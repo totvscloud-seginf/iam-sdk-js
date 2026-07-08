@@ -1,0 +1,127 @@
+# @tcloud/iam-sdk
+
+Framework-agnostic TypeScript SDK for TOTVS Cloud IAM frontends.
+
+This package is the core SDK only. React, Angular, Vue or other framework adapters should be built on top of this package.
+
+## Install
+
+```bash
+npm install @tcloud/iam-sdk
+```
+
+## Create A Client
+
+```ts
+import { IamClient } from "@tcloud/iam-sdk";
+
+const iam = new IamClient({
+  endpointAuthn: "https://iam.example.com/api",
+  endpointAuthzFrontend: "https://iam.example.com/frontend/authorizations",
+  endpointCp: "https://iam.example.com/v1",
+  getToken: () => localStorage.getItem("access_token") ?? "",
+  cache: { ttl: 300 },
+});
+```
+
+## AuthN
+
+```ts
+await iam.login({
+  apiAccessKey: "user",
+  apiSecretKey: "secret",
+  region: "sa-east-1",
+  service: "iam",
+});
+
+const roles = await iam.listMyRoles();
+const claims = await iam.validateToken();
+
+await iam.assumeRole({
+  roleName: "admin",
+  tenant: "CCODE0",
+});
+```
+
+`assumeRole()` and `setToken()` invalidate the authorization cache because the principal changed.
+
+## Frontend Authorization
+
+The SDK talks to the IAM BFF endpoint:
+
+```http
+POST /frontend/authorizations/evaluate
+Authorization: Bearer <JWT>
+```
+
+Request bodies contain only checks. The tenant is not sent in the body because the BFF extracts it from `ext.tenant` in the JWT.
+
+```ts
+const snapshot = await iam.evaluate([
+  { action: "iam:listUsers" },
+  {
+    action: "iam:updateRole",
+    alias: "editAdminRole",
+    resource: "trn:tcloud:iam::CCODE0:role/admin-role",
+    context: { requestedRegion: "global" },
+  },
+]);
+
+if (snapshot["iam:listUsers"]?.allowed) {
+  // show UI
+}
+```
+
+Capability keys are intentionally not supported in v1 because the current BFF rejects `key`. Use direct actions in `service:action` format.
+
+## Helpers And Cache
+
+```ts
+const canListUsers = await iam.can("iam:listUsers");
+const canManageUsers = await iam.canAll(["iam:listUsers", "iam:createUser"]);
+const canDoSomething = await iam.canAny(["iam:createUser", "iam:updateUser"]);
+
+const cached = iam.getCached("iam:listUsers");
+iam.invalidateCache();
+```
+
+The default cache TTL is 300 seconds. Batches larger than 50 checks are automatically split because the BFF limit is 50 checks per request.
+
+## Fallbacks
+
+Fallback endpoints are tried only for transport failures or timeouts. HTTP responses from the server, including 4xx and 5xx, are treated as authoritative.
+
+```ts
+const iam = new IamClient({
+  endpointAuthzFrontend: "https://primary/frontend/authorizations",
+  endpointAuthzFrontendFallbacks: [
+    "https://fallback-1/frontend/authorizations",
+    "https://fallback-2/frontend/authorizations",
+  ],
+});
+```
+
+## Control Plane
+
+The `iam.iam` module mirrors the main IAM Control Plane helpers from the Python SDK:
+
+```ts
+await iam.iam.createUser("alice");
+await iam.iam.createRole("admin", "role", trustPolicy);
+await iam.iam.attachRolePolicies("admin", ["trn:tenant::iam::global:policy/name"]);
+const users = await iam.iam.listUsers();
+```
+
+## Development
+
+```bash
+npm install
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+## Versioning
+
+This package follows SemVer. The initial version is `0.1.0`; public API changes before `1.0.0` may still occur, but breaking changes should be documented in `CHANGELOG.md`.

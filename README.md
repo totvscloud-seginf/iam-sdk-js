@@ -125,3 +125,7 @@ npm run build
 ## Versioning
 
 This package follows SemVer. The initial version is `0.1.0`; public API changes before `1.0.0` may still occur, but breaking changes should be documented in `CHANGELOG.md`.
+
+Versioning is handled by the `Versioning` GitHub Actions workflow. Run it from the `main` branch and choose the SemVer bump (`patch`, `minor`, `major` or pre-release variants). The workflow updates `package.json` and `package-lock.json`, pushes a `vX.Y.Z` tag and creates a GitHub Release.
+
+Publishing to npm is handled by the `Release` workflow when a GitHub Release is published.

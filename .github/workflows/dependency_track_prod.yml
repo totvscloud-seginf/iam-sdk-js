@@ -1,20 +1,19 @@
 name: PROD - Dependency Track
-on:
-  workflow_call:
 
-  workflow_dispatch:
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/dependency_track_prod.yml"
+      - "src/**"
+      - "package-lock.json"
 
 jobs:
   sbom:
     name: Upload SBOM
     runs-on: ubuntu-latest
     steps:
-      - name: Fail if branch is not main
-        if: github.event_name == 'workflow_call' && github.ref != 'refs/heads/main'
-        run: |
-          echo "This workflow should not be triggered with workflow_dispatch on a accepted branch"
-          exit 1
-
       - name: Checkout code
         uses: actions/checkout@v6.0.2
 

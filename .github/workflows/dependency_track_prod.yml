@@ -1,0 +1,27 @@
+name: PROD - DTrack
+
+on:
+  push:
+    branches:
+      - "main"
+    paths:
+      - ".github/workflows/dependency_track_prod.yml"
+      - "src/**"
+      - "package-lock.json"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  dependency_track:
+    name: Deploy artifact to Dependency Track
+    uses: totvscloud-seginf/shared-workflows/.github/workflows/dependency-track.yml@v1.9.6
+    secrets:
+      dtrack_x_api_key: ${{ secrets.DTRACK_X_API_KEY_PROD }}
+    with:
+      project_id: #TODO-INCLUDE
+      build_container: false
+      build_submodules: false
+      scan_ref: "package-lock.json"
+      scan_type: fs

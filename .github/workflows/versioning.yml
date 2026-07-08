@@ -6,9 +6,10 @@ on:
       version:
         description: "SemVer bump to apply"
         required: true
-        default: "patch"
+        default: "current"
         type: choice
         options:
+          - current
           - patch
           - minor
           - major
@@ -36,7 +37,7 @@ concurrency:
 
 jobs:
   version:
-    name: Bump package version and create GitHub Release
+    name: Create version tag and GitHub Release
     runs-on: self-hosted
     if: github.ref_name == 'main'
     steps:
@@ -61,13 +62,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version
+      - name: Resolve version
         id: bump
         env:
           VERSION_BUMP: ${{ inputs.version }}
           PREID: ${{ inputs.prerelease_identifier }}
         run: |
           case "$VERSION_BUMP" in
+            current)
+              VERSION="$(node -p "require('./package.json').version")"
+              git tag "v$VERSION"
+              ;;
             prepatch|preminor|premajor|prerelease)
               npm version "$VERSION_BUMP" --preid "$PREID"
               ;;
@@ -85,7 +90,14 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Push version commit and tag
-        run: git push origin HEAD:main --follow-tags
+        env:
+          VERSION_BUMP: ${{ inputs.version }}
+        run: |
+          if [[ "$VERSION_BUMP" == "current" ]]; then
+            git push origin "${{ steps.bump.outputs.tag }}"
+          else
+            git push origin HEAD:main --follow-tags
+          fi
 
       - name: Create GitHub Release
         env:

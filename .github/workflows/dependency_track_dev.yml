@@ -1,28 +1,54 @@
-name: DEV - DTrack
-
+name: PROD - Dependency Track
 on:
-  push:
-    branches:
-      - "development"
-    paths:
-      - ".github/workflows/dependency_track_dev.yml"
-      - "src/**"
-      - "package-lock.json"
+  workflow_call:
 
-permissions:
-  id-token: write
-  contents: read
+  workflow_dispatch:
 
 jobs:
-  dependency_track:
-    name: Deploy artifact to Dependency Track
-    uses: totvscloud-seginf/shared-workflows/.github/workflows/dependency-track.yml@feat/parameterize_runs_on
-    secrets:
-      dtrack_x_api_key: ${{ secrets.DTRACK_X_API_KEY_PROD }}
-    with:
-      project_id: 6246bc56-99f8-4f18-b35c-7a806bae54a0
-      build_container: false
-      build_submodules: false
-      scan_ref: "package-lock.json"
-      scan_type: fs
-      runs_on: ubuntu-latest
+  sbom:
+    name: Upload SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if branch is not development
+        if: github.event_name == 'workflow_call' && github.ref != 'refs/heads/development'
+        run: |
+          echo "This workflow should not be triggered with workflow_dispatch on a accepted branch"
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: fs
+          scan-ref: "package-lock.json"
+          format: cyclonedx
+          output: sbom.json
+
+      - name: Upload SBOM
+        env:
+          X_API_KEY: ${{ secrets.DTRACK_X_API_KEY_PROD }}
+          PROJECT_ID: 6246bc56-99f8-4f18-b35c-7a806bae54a0
+        run: |
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
+            -X "POST" "https://api-dependencytrack.cloudtotvs.com.br/api/v1/bom" \
+            -H 'Content-Type: multipart/form-data' \
+            -H "X-Api-Key: $X_API_KEY" \
+            -F "project=$PROJECT_ID" \
+            -F "bom=@sbom.json")
+
+          if [ $HTTP_STATUS != "200" ]; then
+            echo "Failed to upload SBOM. HTTP STATUS: $HTTP_STATUS"
+            echo "API Response:"
+            if [ -f response.json ]; then
+              cat response.json
+            else
+              echo "No response body captured (response.json not found)."
+            fi
+            rm -f response.json
+            exit 1;
+          fi
+
+          # Clean up temporary response file
+          rm -f response.json

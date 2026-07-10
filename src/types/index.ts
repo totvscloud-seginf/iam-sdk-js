@@ -9,9 +9,9 @@ export interface CacheConfig {
 
 export interface IamClientConfig {
   endpointAuthn?: string;
-  endpointAuthzFrontend?: string;
+  endpointAuthzBatchEvaluate?: string;
   endpointCp?: string;
-  endpointAuthzFrontendFallbacks?: string[] | string;
+  endpointAuthzBatchEvaluateFallbacks?: string[] | string;
   getToken?: () => string | Promise<string>;
   fetcher?: FetchLike;
   timeoutMs?: number;

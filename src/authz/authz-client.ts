@@ -1,4 +1,4 @@
-import { authzFrontendEndpoints, type NormalizedConfig } from "../config";
+import { authzBatchEvaluateEndpoints, type NormalizedConfig } from "../config";
 import { UnsupportedCapabilityKeyError } from "../errors";
 import { AuthorizationCache } from "../cache/authorization-cache";
 import type { HttpClient } from "../http/http-client";
@@ -94,7 +94,7 @@ export class AuthzClient {
   }
 
   private async evaluateChunk(chunk: PreparedCheck[], token: string): Promise<EvaluateResponse> {
-    const endpoints = authzFrontendEndpoints(this.config).map((endpoint) => `${endpoint}/evaluate`);
+    const endpoints = authzBatchEvaluateEndpoints(this.config);
     return this.http.requestJson<EvaluateResponse>(endpoints[0]!, {
       method: "POST",
       endpoints,

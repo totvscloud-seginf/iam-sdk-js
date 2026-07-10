@@ -17,7 +17,7 @@ import { IamClient } from "@totvs-cloud/iam-sdk";
 
 const iam = new IamClient({
   endpointAuthn: "https://iam.example.com/api",
-  endpointAuthzFrontend: "https://iam.example.com/frontend/authorizations",
+  endpointAuthzBatchEvaluate: "https://iam.example.com/frontend/authorizations/evaluate",
   endpointCp: "https://iam.example.com/v1",
   getToken: () => localStorage.getItem("access_token") ?? "",
   cache: { ttl: 300 },
@@ -93,10 +93,10 @@ Fallback endpoints are tried only for transport failures or timeouts. HTTP respo
 
 ```ts
 const iam = new IamClient({
-  endpointAuthzFrontend: "https://primary/frontend/authorizations",
-  endpointAuthzFrontendFallbacks: [
-    "https://fallback-1/frontend/authorizations",
-    "https://fallback-2/frontend/authorizations",
+  endpointAuthzBatchEvaluate: "https://primary/frontend/authorizations/evaluate",
+  endpointAuthzBatchEvaluateFallbacks: [
+    "https://fallback-1/frontend/authorizations/evaluate",
+    "https://fallback-2/frontend/authorizations/evaluate",
   ],
 });
 ```

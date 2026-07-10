@@ -4,5 +4,5 @@
 
 - Initial TypeScript core SDK.
 - Added AuthN helpers compatible with the Python SDK.
-- Added frontend authorization through `POST /frontend/authorizations/evaluate`.
+- Added frontend authorization through the configured batch evaluate endpoint.
 - Added in-memory authorization cache, batch chunking, fallback endpoints and Control Plane helpers.

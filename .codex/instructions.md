@@ -14,8 +14,8 @@ These instructions are for AI agents and future maintainers working on this repo
 
 ## Non-Negotiable Contracts
 
-- Frontend authorization must call `POST {endpointAuthzFrontend}/evaluate`.
-- The endpoint base should normally point to `/frontend/authorizations`; the SDK appends `/evaluate`.
+- Frontend authorization must call `POST {endpointAuthzBatchEvaluate}`.
+- The endpoint should normally point to the full batch validation URL `/frontend/authorizations/evaluate`; the SDK must not append path segments.
 - The request body is exactly `{ checks: [...] }`; do not send `tenant` in the body.
 - The BFF extracts tenant from `ext.tenant` in the JWT.
 - Use `Authorization: Bearer <token>` for the BFF, AuthN and Control Plane calls.

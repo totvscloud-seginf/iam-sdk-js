@@ -1,16 +1,16 @@
 import type { IamClientConfig, LogLevel } from "./types";
 
 export const DEFAULT_AUTHN_ENDPOINT = "http://localhost:9000/api";
-export const DEFAULT_AUTHZ_FRONTEND_ENDPOINT = "http://localhost:443/frontend/authorizations";
+export const DEFAULT_AUTHZ_BATCH_EVALUATE_ENDPOINT = "http://localhost:443/frontend/authorizations/evaluate";
 export const DEFAULT_CP_ENDPOINT = "http://localhost:443/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
 export const DEFAULT_CACHE_TTL_SECONDS = 300;
 
 export interface NormalizedConfig {
   endpointAuthn: string;
-  endpointAuthzFrontend: string;
+  endpointAuthzBatchEvaluate: string;
   endpointCp: string;
-  endpointAuthzFrontendFallbacks: string[];
+  endpointAuthzBatchEvaluateFallbacks: string[];
   timeoutMs: number;
   cacheTtlSeconds: number;
   cacheEnabled: boolean;
@@ -33,10 +33,10 @@ export function parseEndpointList(value?: string[] | string): string[] {
 }
 
 export function normalizeConfig(config: IamClientConfig = {}): NormalizedConfig {
-  const endpointAuthzFrontend = (
-    config.endpointAuthzFrontend ??
-    process.env.IAM_AUTHZ_FRONTEND_ENDPOINT ??
-    DEFAULT_AUTHZ_FRONTEND_ENDPOINT
+  const endpointAuthzBatchEvaluate = (
+    config.endpointAuthzBatchEvaluate ??
+    process.env.IAM_AUTHZ_BATCH_EVALUATE_ENDPOINT ??
+    DEFAULT_AUTHZ_BATCH_EVALUATE_ENDPOINT
   ).replace(/\/+$/, "");
 
   return {
@@ -44,11 +44,11 @@ export function normalizeConfig(config: IamClientConfig = {}): NormalizedConfig 
       /\/+$/,
       "",
     ),
-    endpointAuthzFrontend,
+    endpointAuthzBatchEvaluate,
     endpointCp: (config.endpointCp ?? process.env.IAM_CP_ENDPOINT ?? DEFAULT_CP_ENDPOINT).replace(/\/+$/, ""),
-    endpointAuthzFrontendFallbacks: parseEndpointList(
-      config.endpointAuthzFrontendFallbacks ?? process.env.IAM_AUTHZ_FRONTEND_FALLBACK_ENDPOINTS,
-    ).filter((endpoint) => endpoint !== endpointAuthzFrontend),
+    endpointAuthzBatchEvaluateFallbacks: parseEndpointList(
+      config.endpointAuthzBatchEvaluateFallbacks ?? process.env.IAM_AUTHZ_BATCH_EVALUATE_FALLBACK_ENDPOINTS,
+    ).filter((endpoint) => endpoint !== endpointAuthzBatchEvaluate),
     timeoutMs: config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     cacheTtlSeconds: config.cache?.ttl ?? DEFAULT_CACHE_TTL_SECONDS,
     cacheEnabled: config.cache?.enabled ?? true,
@@ -58,8 +58,8 @@ export function normalizeConfig(config: IamClientConfig = {}): NormalizedConfig 
   };
 }
 
-export function authzFrontendEndpoints(config: NormalizedConfig): string[] {
-  return [config.endpointAuthzFrontend, ...config.endpointAuthzFrontendFallbacks].filter(
+export function authzBatchEvaluateEndpoints(config: NormalizedConfig): string[] {
+  return [config.endpointAuthzBatchEvaluate, ...config.endpointAuthzBatchEvaluateFallbacks].filter(
     (endpoint, index, all) => endpoint && all.indexOf(endpoint) === index,
   );
 }

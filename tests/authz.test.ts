@@ -8,7 +8,7 @@ describe("frontend authorization", () => {
       jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }),
     );
     const client = new IamClient({
-      endpointAuthzFrontend: "http://iam/frontend/authorizations",
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
       fetcher,
     }).setToken(token());
 
@@ -32,7 +32,7 @@ describe("frontend authorization", () => {
         },
       }),
     );
-    const client = new IamClient({ endpointAuthzFrontend: "http://iam/frontend/authorizations", fetcher }).setToken(
+    const client = new IamClient({ endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate", fetcher }).setToken(
       token(),
     );
 
@@ -66,7 +66,7 @@ describe("frontend authorization", () => {
       );
       return jsonResponse({ decisions });
     });
-    const client = new IamClient({ endpointAuthzFrontend: "http://iam/frontend/authorizations", fetcher }).setToken(
+    const client = new IamClient({ endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate", fetcher }).setToken(
       token(),
     );
 
@@ -89,7 +89,7 @@ describe("frontend authorization", () => {
     const { fetcher, calls } = createFetchMock(() =>
       jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }),
     );
-    const client = new IamClient({ endpointAuthzFrontend: "http://iam/frontend/authorizations", fetcher }).setToken(
+    const client = new IamClient({ endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate", fetcher }).setToken(
       token(),
     );
 
@@ -108,8 +108,8 @@ describe("frontend authorization", () => {
       return jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } });
     });
     const client = new IamClient({
-      endpointAuthzFrontend: "http://primary/frontend/authorizations",
-      endpointAuthzFrontendFallbacks: ["http://fallback/frontend/authorizations"],
+      endpointAuthzBatchEvaluate: "http://primary/frontend/authorizations/evaluate",
+      endpointAuthzBatchEvaluateFallbacks: ["http://fallback/frontend/authorizations/evaluate"],
       fetcher,
     }).setToken(token());
 

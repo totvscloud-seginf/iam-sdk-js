@@ -32,7 +32,7 @@ describe("authn", () => {
     });
     const client = new IamClient({
       endpointAuthn: "http://authn/api",
-      endpointAuthzFrontend: "http://iam/frontend/authorizations",
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
       fetcher,
     }).setToken(token("CCODE0"));
 

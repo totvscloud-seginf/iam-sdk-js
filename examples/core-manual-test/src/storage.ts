@@ -6,8 +6,8 @@ const TOKEN_KEY = "iam-sdk-manual-test-token";
 export const defaultConfig: AppConfig = {
   mode: "mock",
   endpointAuthn: "http://localhost:9000/api",
-  endpointAuthzFrontend: "http://localhost:443/frontend/authorizations",
-  endpointAuthzFrontendFallbacks: "",
+  endpointAuthzBatchEvaluate: "http://localhost:443/frontend/authorizations/evaluate",
+  endpointAuthzBatchEvaluateFallbacks: "",
   timeoutMs: 30_000,
   cacheEnabled: true,
   cacheTtlSeconds: 300,

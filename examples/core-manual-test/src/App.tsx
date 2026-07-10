@@ -74,8 +74,8 @@ export function App() {
   const client = useMemo(() => {
     const iam = new IamClient({
       endpointAuthn: config.endpointAuthn,
-      endpointAuthzFrontend: config.endpointAuthzFrontend,
-      endpointAuthzFrontendFallbacks: config.endpointAuthzFrontendFallbacks,
+      endpointAuthzBatchEvaluate: config.endpointAuthzBatchEvaluate,
+      endpointAuthzBatchEvaluateFallbacks: config.endpointAuthzBatchEvaluateFallbacks,
       timeoutMs: config.timeoutMs,
       cache: { enabled: config.cacheEnabled, ttl: config.cacheTtlSeconds },
       fetcher,
@@ -133,16 +133,16 @@ export function App() {
         <Field label="AuthN endpoint">
           <input value={config.endpointAuthn} onChange={(event) => updateConfig(setConfig, { endpointAuthn: event.target.value })} />
         </Field>
-        <Field label="AuthZ frontend endpoint">
+        <Field label="AuthZ batch evaluate endpoint">
           <input
-            value={config.endpointAuthzFrontend}
-            onChange={(event) => updateConfig(setConfig, { endpointAuthzFrontend: event.target.value })}
+            value={config.endpointAuthzBatchEvaluate}
+            onChange={(event) => updateConfig(setConfig, { endpointAuthzBatchEvaluate: event.target.value })}
           />
         </Field>
-        <Field label="AuthZ fallback endpoints">
+        <Field label="AuthZ batch evaluate fallbacks">
           <input
-            value={config.endpointAuthzFrontendFallbacks}
-            onChange={(event) => updateConfig(setConfig, { endpointAuthzFrontendFallbacks: event.target.value })}
+            value={config.endpointAuthzBatchEvaluateFallbacks}
+            onChange={(event) => updateConfig(setConfig, { endpointAuthzBatchEvaluateFallbacks: event.target.value })}
             placeholder="comma separated"
           />
         </Field>

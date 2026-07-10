@@ -6,8 +6,8 @@ export type MockFailure = "none" | "401" | "403" | "invalid-json" | "transport";
 export interface AppConfig {
   mode: RuntimeMode;
   endpointAuthn: string;
-  endpointAuthzFrontend: string;
-  endpointAuthzFrontendFallbacks: string;
+  endpointAuthzBatchEvaluate: string;
+  endpointAuthzBatchEvaluateFallbacks: string;
   timeoutMs: number;
   cacheEnabled: boolean;
   cacheTtlSeconds: number;

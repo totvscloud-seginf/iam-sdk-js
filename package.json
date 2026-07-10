@@ -26,6 +26,8 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build:manual": "npm --prefix examples/core-manual-test run build",
+    "dev:manual": "npm --prefix examples/core-manual-test run dev",
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"

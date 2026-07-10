@@ -1,0 +1,52 @@
+name: Deploy core manual test
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "examples/core-manual-test/**"
+            - ".github/workflows/deploy-core-manual-test.yml"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: false
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+                  cache-dependency-path: examples/core-manual-test/package-lock.json
+
+            - run: npm ci
+              working-directory: examples/core-manual-test
+
+            - run: npm run build
+              working-directory: examples/core-manual-test
+
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: examples/core-manual-test/dist
+
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - id: deployment
+              uses: actions/deploy-pages@v4

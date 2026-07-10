@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   root: import.meta.dirname,
+  base: "/iam-sdk-js/",
   plugins: [react()],
   define: {
     "process.env": {},

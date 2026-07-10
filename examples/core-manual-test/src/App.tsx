@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IamClient, type AuthorizationCheck, type AuthorizationSnapshot } from "../../../src";
+import {
+  IamClient,
+  type AuthorizationCheck,
+  type AuthorizationSnapshot,
+} from "../../../src";
 import { createInstrumentedFetcher } from "./debug-fetch";
 import { createMockFetcher } from "./mock";
-import { defaultConfig, loadConfig, loadToken, saveConfig, saveToken } from "./storage";
+import {
+  defaultConfig,
+  loadConfig,
+  loadToken,
+  saveConfig,
+  saveToken,
+} from "./storage";
 import type { AppConfig, DebugCall, MockConfig } from "./types";
 
 type Tab = "authn" | "authz";
@@ -17,7 +27,11 @@ const defaultChecks: AuthorizationCheck[] = [
   },
 ];
 
-const defaultSnapshot = JSON.stringify({ "iam:listUsers": { allowed: true } }, null, 2);
+const defaultSnapshot = JSON.stringify(
+  { "iam:listUsers": { allowed: true } },
+  null,
+  2,
+);
 
 export function App() {
   const [config, setConfig] = useState<AppConfig>(loadConfig);
@@ -26,7 +40,9 @@ export function App() {
     defaultAllowed: true,
     deniedActions: "iam:deleteUser,iam:updateRole",
   });
-  const [token, setTokenState] = useState(() => (loadConfig().persistToken ? loadToken() : ""));
+  const [token, setTokenState] = useState(() =>
+    loadConfig().persistToken ? loadToken() : "",
+  );
   const [tokenInput, setTokenInput] = useState(token);
   const [calls, setCalls] = useState<DebugCall[]>([]);
   const [tab, setTab] = useState<Tab>("authn");
@@ -46,12 +62,18 @@ export function App() {
     region: "sa-east-1",
     service: "iam",
   });
-  const [checksJson, setChecksJson] = useState(JSON.stringify(defaultChecks, null, 2));
-  const [singleCheckJson, setSingleCheckJson] = useState(JSON.stringify({ action: "iam:listUsers" }, null, 2));
+  const [checksJson, setChecksJson] = useState(
+    JSON.stringify(defaultChecks, null, 2),
+  );
+  const [singleCheckJson, setSingleCheckJson] = useState(
+    JSON.stringify({ action: "iam:listUsers" }, null, 2),
+  );
   const [snapshotJson, setSnapshotJson] = useState(defaultSnapshot);
   const [cacheScope, setCacheScope] = useState("");
 
-  const instrumentedRef = useRef<ReturnType<typeof createInstrumentedFetcher> | undefined>(undefined);
+  const instrumentedRef = useRef<
+    ReturnType<typeof createInstrumentedFetcher> | undefined
+  >(undefined);
 
   useEffect(() => {
     saveConfig(config);
@@ -63,7 +85,10 @@ export function App() {
   }, [config, token]);
 
   const fetcher = useMemo(() => {
-    const delegate = config.mode === "mock" ? createMockFetcher(mockConfig) : globalThis.fetch.bind(globalThis);
+    const delegate =
+      config.mode === "mock"
+        ? createMockFetcher(mockConfig)
+        : globalThis.fetch.bind(globalThis);
     const instrumented = createInstrumentedFetcher(delegate, (call) => {
       setCalls((items) => [call, ...items].slice(0, 80));
     });
@@ -75,7 +100,8 @@ export function App() {
     const iam = new IamClient({
       endpointAuthn: config.endpointAuthn,
       endpointAuthzBatchEvaluate: config.endpointAuthzBatchEvaluate,
-      endpointAuthzBatchEvaluateFallbacks: config.endpointAuthzBatchEvaluateFallbacks,
+      endpointAuthzBatchEvaluateFallbacks:
+        config.endpointAuthzBatchEvaluateFallbacks,
       timeoutMs: config.timeoutMs,
       cache: { enabled: config.cacheEnabled, ttl: config.cacheTtlSeconds },
       fetcher,
@@ -99,10 +125,18 @@ export function App() {
         const value = await operation();
         const nextToken = client.getToken();
         if (nextToken !== token) setToken(nextToken);
-        setResult({ label, durationMs: Math.round(performance.now() - started), value });
+        setResult({
+          label,
+          durationMs: Math.round(performance.now() - started),
+          value,
+        });
       } catch (caught) {
         setError(formatError(caught));
-        setResult({ label, durationMs: Math.round(performance.now() - started), error: serializeError(caught) });
+        setResult({
+          label,
+          durationMs: Math.round(performance.now() - started),
+          error: serializeError(caught),
+        });
       } finally {
         setBusy("");
       }
@@ -120,10 +154,16 @@ export function App() {
           <p>Manual AuthN/AuthZ debug surface for the local SDK source.</p>
         </div>
         <div className="mode-toggle" role="group" aria-label="Runtime mode">
-          <button className={config.mode === "mock" ? "active" : ""} onClick={() => updateConfig(setConfig, { mode: "mock" })}>
+          <button
+            className={config.mode === "mock" ? "active" : ""}
+            onClick={() => updateConfig(setConfig, { mode: "mock" })}
+          >
             Mock
           </button>
-          <button className={config.mode === "real" ? "active" : ""} onClick={() => updateConfig(setConfig, { mode: "real" })}>
+          <button
+            className={config.mode === "real" ? "active" : ""}
+            onClick={() => updateConfig(setConfig, { mode: "real" })}
+          >
             Real
           </button>
         </div>
@@ -131,18 +171,31 @@ export function App() {
 
       <section className="grid config-grid">
         <Field label="AuthN endpoint">
-          <input value={config.endpointAuthn} onChange={(event) => updateConfig(setConfig, { endpointAuthn: event.target.value })} />
+          <input
+            value={config.endpointAuthn}
+            onChange={(event) =>
+              updateConfig(setConfig, { endpointAuthn: event.target.value })
+            }
+          />
         </Field>
         <Field label="AuthZ batch evaluate endpoint">
           <input
             value={config.endpointAuthzBatchEvaluate}
-            onChange={(event) => updateConfig(setConfig, { endpointAuthzBatchEvaluate: event.target.value })}
+            onChange={(event) =>
+              updateConfig(setConfig, {
+                endpointAuthzBatchEvaluate: event.target.value,
+              })
+            }
           />
         </Field>
         <Field label="AuthZ batch evaluate fallbacks">
           <input
             value={config.endpointAuthzBatchEvaluateFallbacks}
-            onChange={(event) => updateConfig(setConfig, { endpointAuthzBatchEvaluateFallbacks: event.target.value })}
+            onChange={(event) =>
+              updateConfig(setConfig, {
+                endpointAuthzBatchEvaluateFallbacks: event.target.value,
+              })
+            }
             placeholder="comma separated"
           />
         </Field>
@@ -151,7 +204,9 @@ export function App() {
             type="number"
             min="1"
             value={config.timeoutMs}
-            onChange={(event) => updateConfig(setConfig, { timeoutMs: Number(event.target.value) })}
+            onChange={(event) =>
+              updateConfig(setConfig, { timeoutMs: Number(event.target.value) })
+            }
           />
         </Field>
         <Field label="Cache TTL seconds">
@@ -159,14 +214,20 @@ export function App() {
             type="number"
             min="0"
             value={config.cacheTtlSeconds}
-            onChange={(event) => updateConfig(setConfig, { cacheTtlSeconds: Number(event.target.value) })}
+            onChange={(event) =>
+              updateConfig(setConfig, {
+                cacheTtlSeconds: Number(event.target.value),
+              })
+            }
           />
         </Field>
         <label className="check-row">
           <input
             type="checkbox"
             checked={config.cacheEnabled}
-            onChange={(event) => updateConfig(setConfig, { cacheEnabled: event.target.checked })}
+            onChange={(event) =>
+              updateConfig(setConfig, { cacheEnabled: event.target.checked })
+            }
           />
           Cache enabled
         </label>
@@ -174,7 +235,9 @@ export function App() {
           <input
             type="checkbox"
             checked={config.persistToken}
-            onChange={(event) => updateConfig(setConfig, { persistToken: event.target.checked })}
+            onChange={(event) =>
+              updateConfig(setConfig, { persistToken: event.target.checked })
+            }
           />
           Persist token
         </label>
@@ -189,7 +252,12 @@ export function App() {
           <Field label="Failure mode">
             <select
               value={mockConfig.failure}
-              onChange={(event) => setMockConfig((current) => ({ ...current, failure: event.target.value as MockConfig["failure"] }))}
+              onChange={(event) =>
+                setMockConfig((current) => ({
+                  ...current,
+                  failure: event.target.value as MockConfig["failure"],
+                }))
+              }
             >
               <option value="none">none</option>
               <option value="401">401</option>
@@ -202,14 +270,24 @@ export function App() {
             <input
               type="checkbox"
               checked={mockConfig.defaultAllowed}
-              onChange={(event) => setMockConfig((current) => ({ ...current, defaultAllowed: event.target.checked }))}
+              onChange={(event) =>
+                setMockConfig((current) => ({
+                  ...current,
+                  defaultAllowed: event.target.checked,
+                }))
+              }
             />
             Default allowed
           </label>
           <Field label="Denied actions">
             <input
               value={mockConfig.deniedActions}
-              onChange={(event) => setMockConfig((current) => ({ ...current, deniedActions: event.target.value }))}
+              onChange={(event) =>
+                setMockConfig((current) => ({
+                  ...current,
+                  deniedActions: event.target.value,
+                }))
+              }
             />
           </Field>
         </section>
@@ -218,7 +296,12 @@ export function App() {
       <section className="workspace">
         <aside className="panel session-panel">
           <h2>Session</h2>
-          <textarea value={tokenInput} onChange={(event) => setTokenInput(event.target.value)} rows={5} spellCheck={false} />
+          <textarea
+            value={tokenInput}
+            onChange={(event) => setTokenInput(event.target.value)}
+            rows={5}
+            spellCheck={false}
+          />
           <div className="button-row">
             <button onClick={() => setToken(tokenInput)}>Set token</button>
             <button
@@ -236,10 +319,16 @@ export function App() {
 
         <section className="main-panel">
           <nav className="tabs">
-            <button className={tab === "authn" ? "active" : ""} onClick={() => setTab("authn")}>
+            <button
+              className={tab === "authn" ? "active" : ""}
+              onClick={() => setTab("authn")}
+            >
               AuthN
             </button>
-            <button className={tab === "authz" ? "active" : ""} onClick={() => setTab("authz")}>
+            <button
+              className={tab === "authz" ? "active" : ""}
+              onClick={() => setTab("authz")}
+            >
               AuthZ
             </button>
           </nav>
@@ -249,30 +338,69 @@ export function App() {
               <h2>AuthN</h2>
               <div className="form-grid">
                 <Field label="apiAccessKey">
-                  <input value={loginForm.apiAccessKey} onChange={(event) => setLoginForm({ ...loginForm, apiAccessKey: event.target.value })} />
+                  <input
+                    value={loginForm.apiAccessKey}
+                    onChange={(event) =>
+                      setLoginForm({
+                        ...loginForm,
+                        apiAccessKey: event.target.value,
+                      })
+                    }
+                  />
                 </Field>
                 <Field label="apiSecretKey">
                   <input
                     type="password"
                     value={loginForm.apiSecretKey}
-                    onChange={(event) => setLoginForm({ ...loginForm, apiSecretKey: event.target.value })}
+                    onChange={(event) =>
+                      setLoginForm({
+                        ...loginForm,
+                        apiSecretKey: event.target.value,
+                      })
+                    }
                   />
                 </Field>
                 <Field label="region">
-                  <input value={loginForm.region} onChange={(event) => setLoginForm({ ...loginForm, region: event.target.value })} />
+                  <input
+                    value={loginForm.region}
+                    onChange={(event) =>
+                      setLoginForm({ ...loginForm, region: event.target.value })
+                    }
+                  />
                 </Field>
                 <Field label="service">
-                  <input value={loginForm.service} onChange={(event) => setLoginForm({ ...loginForm, service: event.target.value })} />
+                  <input
+                    value={loginForm.service}
+                    onChange={(event) =>
+                      setLoginForm({
+                        ...loginForm,
+                        service: event.target.value,
+                      })
+                    }
+                  />
                 </Field>
               </div>
               <div className="button-row">
-                <button disabled={Boolean(busy)} onClick={() => run("login", () => client.login(clean(loginForm)))}>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    run("login", () => client.login(clean(loginForm)))
+                  }
+                >
                   Login
                 </button>
-                <button disabled={Boolean(busy)} onClick={() => run("validateToken", () => client.validateToken())}>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    run("validateToken", () => client.validateToken())
+                  }
+                >
                   Validate token
                 </button>
-                <button disabled={Boolean(busy)} onClick={() => run("listMyRoles", () => client.listMyRoles())}>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() => run("listMyRoles", () => client.listMyRoles())}
+                >
                   List my roles
                 </button>
               </div>
@@ -282,20 +410,56 @@ export function App() {
                 <Field label="roleName">
                   <input
                     value={assumeRoleForm.roleName}
-                    onChange={(event) => setAssumeRoleForm({ ...assumeRoleForm, roleName: event.target.value })}
+                    onChange={(event) =>
+                      setAssumeRoleForm({
+                        ...assumeRoleForm,
+                        roleName: event.target.value,
+                      })
+                    }
                   />
                 </Field>
                 <Field label="tenant">
-                  <input value={assumeRoleForm.tenant} onChange={(event) => setAssumeRoleForm({ ...assumeRoleForm, tenant: event.target.value })} />
+                  <input
+                    value={assumeRoleForm.tenant}
+                    onChange={(event) =>
+                      setAssumeRoleForm({
+                        ...assumeRoleForm,
+                        tenant: event.target.value,
+                      })
+                    }
+                  />
                 </Field>
                 <Field label="region">
-                  <input value={assumeRoleForm.region} onChange={(event) => setAssumeRoleForm({ ...assumeRoleForm, region: event.target.value })} />
+                  <input
+                    value={assumeRoleForm.region}
+                    onChange={(event) =>
+                      setAssumeRoleForm({
+                        ...assumeRoleForm,
+                        region: event.target.value,
+                      })
+                    }
+                  />
                 </Field>
                 <Field label="service">
-                  <input value={assumeRoleForm.service} onChange={(event) => setAssumeRoleForm({ ...assumeRoleForm, service: event.target.value })} />
+                  <input
+                    value={assumeRoleForm.service}
+                    onChange={(event) =>
+                      setAssumeRoleForm({
+                        ...assumeRoleForm,
+                        service: event.target.value,
+                      })
+                    }
+                  />
                 </Field>
               </div>
-              <button disabled={Boolean(busy)} onClick={() => run("assumeRole", () => client.assumeRole(clean(assumeRoleForm)))}>
+              <button
+                disabled={Boolean(busy)}
+                onClick={() =>
+                  run("assumeRole", () =>
+                    client.assumeRole(clean(assumeRoleForm)),
+                  )
+                }
+              >
                 Assume role
               </button>
             </section>
@@ -303,16 +467,52 @@ export function App() {
             <section className="panel tool-panel">
               <h2>AuthZ</h2>
               <Field label="Evaluate checks JSON">
-                <textarea value={checksJson} onChange={(event) => setChecksJson(event.target.value)} rows={11} spellCheck={false} />
+                <textarea
+                  value={checksJson}
+                  onChange={(event) => setChecksJson(event.target.value)}
+                  rows={11}
+                  spellCheck={false}
+                />
               </Field>
               <div className="button-row">
-                <button disabled={Boolean(busy)} onClick={() => run("evaluate", () => client.evaluate(parseChecks(checksJson)))}>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    run("evaluate", () =>
+                      client.evaluate(parseChecks(checksJson)),
+                    )
+                  }
+                >
                   Evaluate
+                </button>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    run("canAny", () => client.canAny(parseChecks(checksJson)))
+                  }
+                >
+                  Can any
+                </button>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    run("canAll", () => client.canAll(parseChecks(checksJson)))
+                  }
+                >
+                  Can all
                 </button>
                 <button
                   className="secondary"
                   onClick={() =>
-                    setChecksJson(JSON.stringify(Array.from({ length: 51 }, (_, index) => ({ action: `iam:action${index}` })), null, 2))
+                    setChecksJson(
+                      JSON.stringify(
+                        Array.from({ length: 51 }, (_, index) => ({
+                          action: `iam:action${index}`,
+                        })),
+                        null,
+                        2,
+                      ),
+                    )
                   }
                 >
                   Generate 51 checks
@@ -320,27 +520,50 @@ export function App() {
               </div>
 
               <Field label="Single check JSON">
-                <textarea value={singleCheckJson} onChange={(event) => setSingleCheckJson(event.target.value)} rows={5} spellCheck={false} />
+                <textarea
+                  value={singleCheckJson}
+                  onChange={(event) => setSingleCheckJson(event.target.value)}
+                  rows={5}
+                  spellCheck={false}
+                />
               </Field>
               <div className="button-row">
-                <button disabled={Boolean(busy)} onClick={() => run("can", () => client.can(parseCheck(singleCheckJson)))}>
+                <button
+                  disabled={Boolean(busy)}
+                  onClick={() =>
+                    run("can", () => client.can(parseCheck(singleCheckJson)))
+                  }
+                >
                   Can
                 </button>
-                <button disabled={Boolean(busy)} onClick={() => run("canAny", () => client.canAny(parseChecks(checksJson)))}>
-                  Can any
+
+                <button
+                  onClick={() =>
+                    setResult({
+                      label: "getCached",
+                      value: client.getCached(parseCheck(singleCheckJson)),
+                    })
+                  }
+                >
+                  Get cached
                 </button>
-                <button disabled={Boolean(busy)} onClick={() => run("canAll", () => client.canAll(parseChecks(checksJson)))}>
-                  Can all
-                </button>
-                <button onClick={() => setResult({ label: "getCached", value: client.getCached(parseCheck(singleCheckJson)) })}>Get cached</button>
               </div>
 
               <div className="split">
                 <Field label="Hydrate snapshot JSON">
-                  <textarea value={snapshotJson} onChange={(event) => setSnapshotJson(event.target.value)} rows={5} spellCheck={false} />
+                  <textarea
+                    value={snapshotJson}
+                    onChange={(event) => setSnapshotJson(event.target.value)}
+                    rows={5}
+                    spellCheck={false}
+                  />
                 </Field>
                 <Field label="Invalidate cache scope">
-                  <input value={cacheScope} onChange={(event) => setCacheScope(event.target.value)} placeholder="optional" />
+                  <input
+                    value={cacheScope}
+                    onChange={(event) => setCacheScope(event.target.value)}
+                    placeholder="optional"
+                  />
                 </Field>
               </div>
               <div className="button-row">
@@ -400,7 +623,13 @@ export function App() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="field">
       <span>{label}</span>
@@ -418,12 +647,17 @@ function JsonBlock({ title, value }: { title?: string; value: unknown }) {
   );
 }
 
-function updateConfig(setConfig: React.Dispatch<React.SetStateAction<AppConfig>>, patch: Partial<AppConfig>): void {
+function updateConfig(
+  setConfig: React.Dispatch<React.SetStateAction<AppConfig>>,
+  patch: Partial<AppConfig>,
+): void {
   setConfig((current) => ({ ...current, ...patch }));
 }
 
 function clean<T extends Record<string, string>>(value: T): T {
-  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== "")) as T;
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== ""),
+  ) as T;
 }
 
 function parseCheck(raw: string): AuthorizationCheck {

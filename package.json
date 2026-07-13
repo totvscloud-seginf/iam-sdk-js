@@ -1,42 +1,35 @@
 {
-  "name": "@totvs-cloud/iam-sdk",
+  "name": "iam-sdk-js",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Monorepo for TOTVS Cloud IAM frontend SDK packages.",
+  "license": "Apache-2.0",
+  "type": "module",
   "repository": {
     "url": "https://github.com/totvscloud-seginf/iam-sdk-js"
   },
-  "version": "0.2.0",
-  "description": "Framework-agnostic TypeScript SDK for TOTVS Cloud IAM.",
-  "license": "Apache-2.0",
-  "type": "module",
-  "sideEffects": false,
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "npm run build --workspaces",
     "build:manual": "npm --prefix examples/core-manual-test run build",
     "dev:manual": "npm --prefix examples/core-manual-test run dev",
-    "test": "vitest run",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^22.10.7",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "eslint": "^9.18.0",
+    "jsdom": "^27.3.0",
     "prettier": "^3.4.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",

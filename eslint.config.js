@@ -5,10 +5,10 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ["dist", "coverage", "node_modules", "examples/core-manual-test"],
+    ignores: ["**/dist", "coverage", "node_modules", "examples/core-manual-test"],
   },
   {
-    files: ["**/*.ts"],
+    files: ["**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
     },

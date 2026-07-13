@@ -10,7 +10,11 @@
     "exactOptionalPropertyTypes": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
-  },
-  "include": ["src", "tests", "eslint.config.js"]
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@totvs-cloud/iam-sdk": ["packages/core/src"],
+      "@totvs-cloud/iam-sdk-react": ["packages/react/src"]
+    }
+  }
 }

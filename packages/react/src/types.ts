@@ -39,10 +39,18 @@ export interface UseCanResult {
   refresh: () => Promise<void>;
 }
 
+export type UseCanGroupResult = UseCanResult;
+
 export interface CanProps {
   action: string;
   children: ReactNode;
   context?: Record<string, unknown>;
   fallback?: ReactNode;
   resource?: string;
+}
+
+export interface CanGroupProps {
+  checks: AuthzCheckInput[];
+  children: ReactNode;
+  fallback?: ReactNode;
 }

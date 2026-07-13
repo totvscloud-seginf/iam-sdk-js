@@ -6,7 +6,7 @@ on:
       - development
     paths:
       - ".github/workflows/dependency_track_dev.yml"
-      - "src/**"
+      - "packages/**"
       - "package-lock.json"
 
 jobs:

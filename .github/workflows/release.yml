@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to publish, for example v0.1.0"
+        description: "Existing tag to publish, for example iam-sdk-react@0.1.0"
         required: true
         type: string
 
@@ -55,19 +55,63 @@ jobs:
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve package
+        id: package
+        env:
+          TAG: ${{ steps.metadata.outputs.tag }}
+        run: |
+          case "$TAG" in
+            iam-sdk-react@*)
+              VERSION="${TAG#iam-sdk-react@}"
+              WORKSPACE="packages/react"
+              PACKAGE_NAME="@totvs-cloud/iam-sdk-react"
+              ;;
+            iam-sdk@*)
+              VERSION="${TAG#iam-sdk@}"
+              WORKSPACE="packages/core"
+              PACKAGE_NAME="@totvs-cloud/iam-sdk"
+              ;;
+            v*)
+              VERSION="${TAG#v}"
+              WORKSPACE="packages/core"
+              PACKAGE_NAME="@totvs-cloud/iam-sdk"
+              ;;
+            *)
+              echo "Unsupported release tag: $TAG" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.metadata.outputs.tag }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
+
+      - name: Validate package version
+        env:
+          WORKSPACE: ${{ steps.package.outputs.workspace }}
+          EXPECTED_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          ACTUAL_VERSION="$(node -p "require('./$WORKSPACE/package.json').version")"
+          if [[ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]]; then
+            echo "Tag version $EXPECTED_VERSION does not match $WORKSPACE package version $ACTUAL_VERSION." >&2
+            exit 1
+          fi
+
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
-      - run: npm publish --provenance --access public
+      - run: npm publish --workspace "${{ steps.package.outputs.workspace }}" --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

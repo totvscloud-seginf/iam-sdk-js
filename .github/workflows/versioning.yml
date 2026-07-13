@@ -3,6 +3,14 @@ name: Versioning
 on:
   workflow_dispatch:
     inputs:
+      package:
+        description: "Package to version"
+        required: true
+        default: "react"
+        type: choice
+        options:
+          - core
+          - react
       version:
         description: "SemVer bump to apply"
         required: true
@@ -62,22 +70,46 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      - name: Resolve package
+        id: package
+        env:
+          PACKAGE_INPUT: ${{ inputs.package }}
+        run: |
+          case "$PACKAGE_INPUT" in
+            core)
+              echo "workspace=packages/core" >> "$GITHUB_OUTPUT"
+              echo "tag_prefix=iam-sdk" >> "$GITHUB_OUTPUT"
+              echo "package_name=@totvs-cloud/iam-sdk" >> "$GITHUB_OUTPUT"
+              ;;
+            react)
+              echo "workspace=packages/react" >> "$GITHUB_OUTPUT"
+              echo "tag_prefix=iam-sdk-react" >> "$GITHUB_OUTPUT"
+              echo "package_name=@totvs-cloud/iam-sdk-react" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported package: $PACKAGE_INPUT" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Resolve version
         id: bump
         env:
           VERSION_BUMP: ${{ inputs.version }}
           PREID: ${{ inputs.prerelease_identifier }}
+          WORKSPACE: ${{ steps.package.outputs.workspace }}
+          TAG_PREFIX: ${{ steps.package.outputs.tag_prefix }}
+          PACKAGE_NAME: ${{ steps.package.outputs.package_name }}
         run: |
           case "$VERSION_BUMP" in
             current)
-              VERSION="$(node -p "require('./package.json').version")"
-              git tag "v$VERSION"
+              VERSION="$(node -p "require('./$WORKSPACE/package.json').version")"
               ;;
             prepatch|preminor|premajor|prerelease)
-              npm version "$VERSION_BUMP" --preid "$PREID"
+              npm version "$VERSION_BUMP" --workspace "$WORKSPACE" --preid "$PREID" --no-git-tag-version
               ;;
             patch|minor|major)
-              npm version "$VERSION_BUMP"
+              npm version "$VERSION_BUMP" --workspace "$WORKSPACE" --no-git-tag-version
               ;;
             *)
               echo "Unsupported version bump: $VERSION_BUMP" >&2
@@ -85,12 +117,27 @@ jobs:
               ;;
           esac
 
-          VERSION="$(node -p "require('./package.json').version")"
+          VERSION="$(node -p "require('./$WORKSPACE/package.json').version")"
+          TAG="$TAG_PREFIX@$VERSION"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG" >&2
+            exit 1
+          fi
+
+          if [[ "$VERSION_BUMP" != "current" ]]; then
+            git add "$WORKSPACE/package.json" package-lock.json
+            git commit -m "chore($TAG_PREFIX): release $VERSION"
+          fi
+
+          git tag "$TAG"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           {
             echo "version=$VERSION"
-            echo "tag=v$VERSION"
+            echo "tag=$TAG"
+            echo "workspace=$WORKSPACE"
+            echo "package_name=$PACKAGE_NAME"
           } > release-metadata.env
 
       - name: Push version commit and tag
@@ -100,7 +147,7 @@ jobs:
           if [[ "$VERSION_BUMP" == "current" ]]; then
             git push origin "${{ steps.bump.outputs.tag }}"
           else
-            git push origin HEAD:main --follow-tags
+            git push origin HEAD:main "${{ steps.bump.outputs.tag }}"
           fi
 
       - name: Check if gh CLI is installed
@@ -119,6 +166,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.bump.outputs.tag }}
           VERSION: ${{ steps.bump.outputs.version }}
+          PACKAGE_NAME: ${{ steps.package.outputs.package_name }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
         run: |
           RELEASE_FLAGS=()
@@ -127,7 +175,7 @@ jobs:
           fi
 
           gh release create "$TAG" \
-            --title "$TAG" \
+            --title "$PACKAGE_NAME $VERSION" \
             --notes "$RELEASE_NOTES" \
             "${RELEASE_FLAGS[@]}"
 

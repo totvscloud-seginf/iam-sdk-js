@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - ".github/workflows/dependency_track_prod.yml"
-      - "src/**"
+      - "packages/**"
       - "package-lock.json"
 
 jobs:

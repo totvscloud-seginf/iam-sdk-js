@@ -2,4 +2,4 @@
 
 ## 0.1.0
 
-- Initial React adapter with `AuthzProvider`, `useIamClient`, `useCan` and `Can`.
+- Initial React adapter with `AuthzProvider`, `useIamClient`, `useCan`, `useCanAny`, `useCanAll`, `Can`, `CanAny` and `CanAll`.

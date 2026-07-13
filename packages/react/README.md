@@ -35,10 +35,12 @@ You can also pass an existing `IamClient` with `client`.
 ## Hooks
 
 ```tsx
-import { useCan } from "@totvs-cloud/iam-sdk-react";
+import { useCan, useCanAll, useCanAny } from "@totvs-cloud/iam-sdk-react";
 
 export function UsersButton() {
   const { allowed, loading, refresh } = useCan("iam:listUsers");
+  const canManageUsers = useCanAll(["iam:listUsers", "iam:createUser"]);
+  const canOpenMenu = useCanAny(["iam:listUsers", "iam:listRoles"]);
 
   if (loading) return null;
   return allowed ? <button onClick={() => void refresh()}>Users</button> : null;
@@ -48,11 +50,19 @@ export function UsersButton() {
 ## Component
 
 ```tsx
-import { Can } from "@totvs-cloud/iam-sdk-react";
+import { Can, CanAll, CanAny } from "@totvs-cloud/iam-sdk-react";
 
 <Can action="iam:createUser" fallback={null}>
   <button>Create user</button>
 </Can>;
+
+<CanAny checks={["iam:listUsers", "iam:listRoles"]}>
+  <button>Open IAM</button>
+</CanAny>;
+
+<CanAll checks={["iam:listUsers", "iam:createUser"]}>
+  <button>Create user</button>
+</CanAll>;
 ```
 
 ## BFF v1 Contract

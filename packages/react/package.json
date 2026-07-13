@@ -1,0 +1,40 @@
+{
+  "name": "@totvs-cloud/iam-sdk-react",
+  "repository": {
+    "url": "https://github.com/totvscloud-seginf/iam-sdk-js"
+  },
+  "version": "0.1.0",
+  "description": "React adapter for the TOTVS Cloud IAM TypeScript SDK.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react --external react-dom --external @totvs-cloud/iam-sdk",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@totvs-cloud/iam-sdk": ">=0.2.0 <1.0.0",
+    "react": ">=17 <20",
+    "react-dom": ">=17 <20"
+  },
+  "devDependencies": {
+    "@totvs-cloud/iam-sdk": "0.2.0"
+  }
+}

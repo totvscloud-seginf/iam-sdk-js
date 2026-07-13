@@ -75,3 +75,16 @@ jobs:
         run: |
           git tag "${{ steps.release.outputs.tag }}"
           git push origin "${{ steps.release.outputs.tag }}"
+
+      - name: Create GitHub Release
+        if: steps.release.outputs.publish == 'true' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGE_NAME: ${{ steps.release.outputs.package_name }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "$PACKAGE_NAME $VERSION" \
+            --notes "Published $PACKAGE_NAME@$VERSION to npm with the latest dist-tag."

@@ -1,4 +1,4 @@
-import type { FetchLike } from "../../../src";
+import type { FetchLike } from "../../../packages/core/src";
 
 export type RuntimeMode = "mock" | "real";
 export type MockFailure = "none" | "401" | "403" | "invalid-json" | "transport";

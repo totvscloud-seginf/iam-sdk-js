@@ -1,4 +1,4 @@
-import type { AuthorizationCheck, FetchLike } from "../../../src";
+import type { AuthorizationCheck, FetchLike } from "../../../packages/core/src";
 import type { MockConfig } from "./types";
 
 interface MockRequest {

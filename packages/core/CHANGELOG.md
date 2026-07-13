@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- Updated the public package scope to `@totvs-cloud/iam-sdk`.
+- Renamed the frontend authorization endpoint option to `endpointAuthzBatchEvaluate`.
+- Added the isolated `core-manual-test` example app for manual browser validation.
+
 ## 0.1.0
 
 - Initial TypeScript core SDK.

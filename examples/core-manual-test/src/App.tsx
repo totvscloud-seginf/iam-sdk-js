@@ -3,7 +3,7 @@ import {
   IamClient,
   type AuthorizationCheck,
   type AuthorizationSnapshot,
-} from "../../../src";
+} from "../../../packages/core/src";
 import { createInstrumentedFetcher } from "./debug-fetch";
 import { createMockFetcher } from "./mock";
 import {

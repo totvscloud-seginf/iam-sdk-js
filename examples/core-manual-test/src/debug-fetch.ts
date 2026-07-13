@@ -1,5 +1,5 @@
 import type { DebugCall, InstrumentedFetcher } from "./types";
-import type { FetchLike } from "../../../src";
+import type { FetchLike } from "../../../packages/core/src";
 
 export function createInstrumentedFetcher(
   delegate: FetchLike,

@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { IamClient, type FetchLike } from "@totvs-cloud/iam-sdk";
-import { AuthzProvider, Can, useCan, useIamClient } from "../src";
+import { AuthzProvider, Can, CanAll, CanAny, useCan, useCanAll, useCanAny, useIamClient } from "../src";
 
 interface FetchCall {
   body: unknown;
@@ -138,6 +138,85 @@ describe("React IAM authorization adapter", () => {
     expect(screen.queryByText("visible")).toBeNull();
   });
 
+  it("allows useCanAny when at least one check is allowed", async () => {
+    const client = createClient(() =>
+      jsonResponse({
+        decisions: {
+          "iam:createUser": { allowed: false },
+          "iam:listUsers": { allowed: true },
+        },
+      }),
+    );
+
+    render(
+      <AuthzProvider client={client}>
+        <GroupStateProbe checks={["iam:createUser", "iam:listUsers"]} mode="any" />
+      </AuthzProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("allowed")).toBeTruthy());
+  });
+
+  it("denies useCanAll when any check is denied", async () => {
+    const client = createClient(() =>
+      jsonResponse({
+        decisions: {
+          "iam:createUser": { allowed: true },
+          "iam:deleteUser": { allowed: false },
+        },
+      }),
+    );
+
+    render(
+      <AuthzProvider client={client}>
+        <GroupStateProbe checks={["iam:createUser", "iam:deleteUser"]} mode="all" />
+      </AuthzProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("denied")).toBeTruthy());
+  });
+
+  it("renders CanAny and CanAll with group decisions", async () => {
+    const client = createClient((input, init) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : { checks: [] };
+      const decisions = Object.fromEntries(
+        (body.checks as Array<{ alias: string; action: string }>).map((check) => [
+          check.alias,
+          { allowed: check.action !== "iam:deleteUser" },
+        ]),
+      );
+      return jsonResponse({ decisions });
+    });
+
+    render(
+      <AuthzProvider client={client}>
+        <CanAny checks={["iam:deleteUser", "iam:listUsers"]} fallback={<span>any-blocked</span>}>
+          <span>any-visible</span>
+        </CanAny>
+        <CanAll checks={["iam:listUsers", "iam:deleteUser"]} fallback={<span>all-blocked</span>}>
+          <span>all-visible</span>
+        </CanAll>
+      </AuthzProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByText("any-visible")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("all-blocked")).toBeTruthy());
+    expect(screen.queryByText("any-blocked")).toBeNull();
+    expect(screen.queryByText("all-visible")).toBeNull();
+  });
+
+  it("treats empty useCanAll as allowed", () => {
+    const client = createClient(() => jsonResponse({ decisions: {} }));
+
+    render(
+      <AuthzProvider client={client}>
+        <GroupStateProbe checks={[]} mode="all" />
+      </AuthzProvider>,
+    );
+
+    expect(screen.getByText("allowed")).toBeTruthy();
+  });
+
   it("reports errors and denies by default", async () => {
     const onError = vi.fn();
     const client = createClient(() => {
@@ -185,6 +264,13 @@ function RefreshProbe() {
       </button>
     </>
   );
+}
+
+function GroupStateProbe({ checks, mode }: { checks: string[]; mode: "all" | "any" }) {
+  const result = mode === "all" ? useCanAll(checks) : useCanAny(checks);
+  if (result.error) return <span>{result.error.constructor.name}</span>;
+  if (result.loading) return <span>loading</span>;
+  return <span>{result.allowed ? "allowed" : "denied"}</span>;
 }
 
 function createClient(fetcher: LooseFetchLike): IamClient {

@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -19,6 +21,9 @@ jobs:
             package-lock.json
             examples/core-manual-test/package-lock.json
       - run: npm ci
+      - name: Validate commit messages
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}"
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test

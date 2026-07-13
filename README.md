@@ -35,4 +35,15 @@ Packages are versioned independently. Use package-scoped Git tags:
 - `iam-sdk@0.2.1` for `@totvs-cloud/iam-sdk`.
 - `iam-sdk-react@0.1.0` for `@totvs-cloud/iam-sdk-react`.
 
-The historical `vX.Y.Z` tags belong to the initial single-package core releases. New releases should use the `Versioning` workflow with the target package selected.
+The historical `vX.Y.Z` tags belong to the initial single-package core releases.
+Pushes to `main` publish stable releases with the npm `latest` tag. Pushes to
+`development` publish prereleases with the npm `dev` tag.
+
+Version bumps are resolved from Conventional Commits:
+
+- `fix(core): correct token refresh` publishes a patch release.
+- `feat(react): add provider option` publishes a minor release.
+- `feat(core)!: change auth flow` publishes a major release.
+
+Commit messages are validated locally by Husky and in pull request checks with
+commitlint.

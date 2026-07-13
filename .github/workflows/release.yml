@@ -1,94 +1,32 @@
 name: Release
 
 on:
-  release:
-    types: [published]
-  workflow_run:
-    workflows: ["Versioning"]
-    types: [completed]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Existing tag to publish, for example iam-sdk-react@0.1.0"
-        required: true
-        type: string
+  push:
+    branches:
+      - main
+      - development
 
 jobs:
   publish:
     runs-on: ubuntu-latest # required Github-hosted runner for npm publish with --provenance
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     permissions:
-      actions: read
-      contents: read
+      contents: write
       id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - workspace: packages/core
+            tag_prefix: iam-sdk
+          - workspace: packages/react
+            tag_prefix: iam-sdk-react
+    concurrency:
+      group: release-${{ github.ref_name }}-${{ matrix.tag_prefix }}
+      cancel-in-progress: false
     steps:
-      - name: Download release metadata
-        if: github.event_name == 'workflow_run'
-        uses: actions/download-artifact@v4
-        with:
-          name: release-metadata
-          path: /tmp/release-metadata
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Resolve release metadata
-        id: metadata
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          DISPATCH_TAG: ${{ inputs.tag }}
-        run: |
-          if [[ "$EVENT_NAME" == "release" ]]; then
-            TAG="$RELEASE_TAG"
-          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            TAG="$DISPATCH_TAG"
-          else
-            # shellcheck disable=SC1091
-            source /tmp/release-metadata/release-metadata.env
-            TAG="$tag"
-          fi
-
-          if [[ -z "$TAG" ]]; then
-            echo "Unable to resolve release tag." >&2
-            exit 1
-          fi
-
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Resolve package
-        id: package
-        env:
-          TAG: ${{ steps.metadata.outputs.tag }}
-        run: |
-          case "$TAG" in
-            iam-sdk-react@*)
-              VERSION="${TAG#iam-sdk-react@}"
-              WORKSPACE="packages/react"
-              PACKAGE_NAME="@totvs-cloud/iam-sdk-react"
-              ;;
-            iam-sdk@*)
-              VERSION="${TAG#iam-sdk@}"
-              WORKSPACE="packages/core"
-              PACKAGE_NAME="@totvs-cloud/iam-sdk"
-              ;;
-            v*)
-              VERSION="${TAG#v}"
-              WORKSPACE="packages/core"
-              PACKAGE_NAME="@totvs-cloud/iam-sdk"
-              ;;
-            *)
-              echo "Unsupported release tag: $TAG" >&2
-              exit 1
-              ;;
-          esac
-
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "workspace=$WORKSPACE" >> "$GITHUB_OUTPUT"
-          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
-
       - uses: actions/checkout@v4
         with:
-          ref: ${{ steps.metadata.outputs.tag }}
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -96,22 +34,44 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
 
-      - name: Validate package version
-        env:
-          WORKSPACE: ${{ steps.package.outputs.workspace }}
-          EXPECTED_VERSION: ${{ steps.package.outputs.version }}
-        run: |
-          ACTUAL_VERSION="$(node -p "require('./$WORKSPACE/package.json').version")"
-          if [[ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]]; then
-            echo "Tag version $EXPECTED_VERSION does not match $WORKSPACE package version $ACTUAL_VERSION." >&2
-            exit 1
-          fi
-
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
-      - run: npm publish --workspace "${{ steps.package.outputs.workspace }}" --provenance --access public
+
+      - name: Resolve next version
+        id: release
+        run: |
+          node scripts/release/resolve-version.mjs \
+            --workspace "${{ matrix.workspace }}" \
+            --tag-prefix "${{ matrix.tag_prefix }}" \
+            --branch "${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Git
+        if: steps.release.outputs.publish == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Apply package version
+        if: steps.release.outputs.publish == 'true'
+        run: npm version "${{ steps.release.outputs.version }}" --workspace "${{ matrix.workspace }}" --no-git-tag-version
+
+      - name: Validate package contents
+        if: steps.release.outputs.publish == 'true'
+        run: npm publish --workspace "${{ matrix.workspace }}" --provenance --access public --tag "${{ steps.release.outputs.npm_tag }}" --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish package
+        if: steps.release.outputs.publish == 'true'
+        run: npm publish --workspace "${{ matrix.workspace }}" --provenance --access public --tag "${{ steps.release.outputs.npm_tag }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Push release tag
+        if: steps.release.outputs.publish == 'true'
+        run: |
+          git tag "${{ steps.release.outputs.tag }}"
+          git push origin "${{ steps.release.outputs.tag }}"

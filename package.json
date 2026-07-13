@@ -14,18 +14,23 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "build:manual": "npm --prefix examples/core-manual-test run build",
+    "commitlint": "commitlint",
     "dev:manual": "npm --prefix examples/core-manual-test run dev",
     "lint": "eslint .",
+    "prepare": "husky",
     "test": "npm run test --workspaces",
     "typecheck": "npm run typecheck --workspaces"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.18.0",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.10.7",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.18.0",
+    "husky": "^9.1.7",
     "jsdom": "^27.3.0",
     "prettier": "^3.4.2",
     "react": "^19.2.7",

@@ -11,6 +11,8 @@ export interface AppConfig {
   timeoutMs: number;
   cacheEnabled: boolean;
   cacheTtlSeconds: number;
+  cacheStorage: "memory" | "localStorage";
+  cacheStorageKey: string;
   persistToken: boolean;
 }
 

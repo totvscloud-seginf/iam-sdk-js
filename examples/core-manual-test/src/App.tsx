@@ -8,8 +8,10 @@ import { createInstrumentedFetcher } from "./debug-fetch";
 import { createMockFetcher } from "./mock";
 import {
   defaultConfig,
+  loadChecksJson,
   loadConfig,
   loadToken,
+  saveChecksJson,
   saveConfig,
   saveToken,
 } from "./storage";
@@ -32,6 +34,7 @@ const defaultSnapshot = JSON.stringify(
   null,
   2,
 );
+const defaultChecksJson = JSON.stringify(defaultChecks, null, 2);
 
 export function App() {
   const [config, setConfig] = useState<AppConfig>(loadConfig);
@@ -63,13 +66,16 @@ export function App() {
     service: "iam",
   });
   const [checksJson, setChecksJson] = useState(
-    JSON.stringify(defaultChecks, null, 2),
+    () => loadChecksJson(defaultChecksJson),
   );
   const [singleCheckJson, setSingleCheckJson] = useState(
     JSON.stringify({ action: "iam:listUsers" }, null, 2),
   );
   const [snapshotJson, setSnapshotJson] = useState(defaultSnapshot);
   const [cacheScope, setCacheScope] = useState("");
+  const [persistedCache, setPersistedCache] = useState<unknown>(() =>
+    readPersistedCache(loadConfig().cacheStorageKey),
+  );
 
   const instrumentedRef = useRef<
     ReturnType<typeof createInstrumentedFetcher> | undefined
@@ -83,6 +89,18 @@ export function App() {
       saveToken("");
     }
   }, [config, token]);
+
+  useEffect(() => {
+    saveChecksJson(checksJson);
+  }, [checksJson]);
+
+  const refreshPersistedCache = useCallback(() => {
+    setPersistedCache(readPersistedCache(config.cacheStorageKey));
+  }, [config.cacheStorageKey]);
+
+  useEffect(() => {
+    refreshPersistedCache();
+  }, [refreshPersistedCache]);
 
   const fetcher = useMemo(() => {
     const delegate =
@@ -103,7 +121,12 @@ export function App() {
       endpointAuthzBatchEvaluateFallbacks:
         config.endpointAuthzBatchEvaluateFallbacks,
       timeoutMs: config.timeoutMs,
-      cache: { enabled: config.cacheEnabled, ttl: config.cacheTtlSeconds },
+      cache: {
+        enabled: config.cacheEnabled,
+        ttl: config.cacheTtlSeconds,
+        storage: config.cacheStorage,
+        storageKey: config.cacheStorageKey,
+      },
       fetcher,
     });
     if (token) iam.setToken(token);
@@ -138,10 +161,11 @@ export function App() {
           error: serializeError(caught),
         });
       } finally {
+        refreshPersistedCache();
         setBusy("");
       }
     },
-    [client, setToken, token],
+    [client, refreshPersistedCache, setToken, token],
   );
 
   const decodedToken = useMemo(() => decodeJwtPayload(token), [token]);
@@ -218,6 +242,27 @@ export function App() {
               updateConfig(setConfig, {
                 cacheTtlSeconds: Number(event.target.value),
               })
+            }
+          />
+        </Field>
+        <Field label="Cache storage">
+          <select
+            value={config.cacheStorage}
+            onChange={(event) =>
+              updateConfig(setConfig, {
+                cacheStorage: event.target.value as AppConfig["cacheStorage"],
+              })
+            }
+          >
+            <option value="memory">memory</option>
+            <option value="localStorage">localStorage</option>
+          </select>
+        </Field>
+        <Field label="Cache storage key">
+          <input
+            value={config.cacheStorageKey}
+            onChange={(event) =>
+              updateConfig(setConfig, { cacheStorageKey: event.target.value })
             }
           />
         </Field>
@@ -517,6 +562,12 @@ export function App() {
                 >
                   Generate 51 checks
                 </button>
+                <button
+                  className="secondary"
+                  onClick={() => setChecksJson(defaultChecksJson)}
+                >
+                  Reset checks
+                </button>
               </div>
 
               <Field label="Single check JSON">
@@ -582,6 +633,7 @@ export function App() {
                   onClick={() =>
                     run("invalidateCache", () => {
                       client.invalidateCache(cacheScope || undefined);
+                      refreshPersistedCache();
                       return client.getCached(parseCheck(singleCheckJson));
                     })
                   }
@@ -598,6 +650,24 @@ export function App() {
           {busy ? <div className="status">Running {busy}</div> : null}
           {error ? <div className="error-box">{error}</div> : null}
           <JsonBlock value={result} />
+          <div className="log-header">
+            <h2>Persisted authz cache</h2>
+            <div className="button-row">
+              <button className="secondary" onClick={refreshPersistedCache}>
+                Refresh
+              </button>
+              <button
+                className="secondary"
+                onClick={() => {
+                  localStorage.removeItem(config.cacheStorageKey);
+                  refreshPersistedCache();
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <JsonBlock value={persistedCache} />
           <div className="log-header">
             <h2>Calls</h2>
             <button className="secondary" onClick={() => setCalls([])}>
@@ -707,4 +777,31 @@ function serializeError(error: unknown): unknown {
     return { name: error.name, message: error.message, stack: error.stack };
   }
   return error;
+}
+
+function readPersistedCache(storageKey: string): unknown {
+  const raw = localStorage.getItem(storageKey);
+  if (!raw) {
+    return {
+      storageKey,
+      found: false,
+      entries: 0,
+    };
+  }
+  try {
+    const parsed = JSON.parse(raw) as { entries?: Record<string, unknown> };
+    return {
+      storageKey,
+      found: true,
+      entries: parsed.entries ? Object.keys(parsed.entries).length : 0,
+      value: parsed,
+    };
+  } catch {
+    return {
+      storageKey,
+      found: true,
+      error: "Stored value is not valid JSON.",
+      raw,
+    };
+  }
 }

@@ -2,6 +2,9 @@ import type { AppConfig } from "./types";
 
 const CONFIG_KEY = "iam-sdk-manual-test-config";
 const TOKEN_KEY = "iam-sdk-manual-test-token";
+const CHECKS_KEY = "iam-sdk-manual-test-evaluate-checks";
+
+export const DEFAULT_AUTHZ_CACHE_STORAGE_KEY = "iam-sdk-manual-test-authz-cache";
 
 export const defaultConfig: AppConfig = {
   mode: "mock",
@@ -11,6 +14,8 @@ export const defaultConfig: AppConfig = {
   timeoutMs: 30_000,
   cacheEnabled: true,
   cacheTtlSeconds: 300,
+  cacheStorage: "memory",
+  cacheStorageKey: DEFAULT_AUTHZ_CACHE_STORAGE_KEY,
   persistToken: false,
 };
 
@@ -39,4 +44,12 @@ export function saveToken(token: string): void {
   } else {
     localStorage.removeItem(TOKEN_KEY);
   }
+}
+
+export function loadChecksJson(fallback: string): string {
+  return localStorage.getItem(CHECKS_KEY) ?? fallback;
+}
+
+export function saveChecksJson(value: string): void {
+  localStorage.setItem(CHECKS_KEY, value);
 }

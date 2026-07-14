@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { IamClient, UnsupportedCapabilityKeyError } from "../src";
 import { createFetchMock, jsonResponse, token } from "./helpers";
+
+const STORAGE_KEY = "test:iam-authz-cache";
+
+afterEach(() => {
+  vi.useRealTimers();
+  Reflect.deleteProperty(globalThis, "localStorage");
+});
 
 describe("frontend authorization", () => {
   it("posts checks to the BFF without tenant in the body", async () => {
@@ -102,6 +109,197 @@ describe("frontend authorization", () => {
     expect(client.getCached("iam:listUsers")).toBeUndefined();
   });
 
+  it("keeps cache in memory by default", async () => {
+    const storage = installLocalStorageMock();
+    const { fetcher } = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }));
+    const client = new IamClient({ endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate", fetcher }).setToken(
+      token(),
+    );
+
+    await client.can("iam:listUsers");
+
+    expect(storage.getItem(STORAGE_KEY)).toBeNull();
+    expect(storage.length).toBe(0);
+  });
+
+  it("persists cache in localStorage and reuses it with the same token", async () => {
+    installLocalStorageMock();
+    const first = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }));
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher: first.fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await expect(client.can("iam:listUsers")).resolves.toBe(true);
+    expect(first.calls).toHaveLength(1);
+
+    const second = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: false } } }));
+    const reloaded = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher: second.fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await expect(reloaded.can("iam:listUsers")).resolves.toBe(true);
+    expect(second.calls).toHaveLength(0);
+  });
+
+  it("does not reuse a persisted decision for a different token", async () => {
+    installLocalStorageMock();
+    const first = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }));
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher: first.fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token("CCODE0"));
+
+    await expect(client.can("iam:listUsers")).resolves.toBe(true);
+
+    const second = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: false } } }));
+    const reloaded = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher: second.fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token("CCODE1"));
+
+    await expect(reloaded.can("iam:listUsers")).resolves.toBe(false);
+    expect(second.calls).toHaveLength(1);
+  });
+
+  it("keeps persisted entries after token changes until they expire", async () => {
+    const storage = installLocalStorageMock();
+    const { fetcher } = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }));
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token("CCODE0"));
+
+    await client.can("iam:listUsers");
+    const persistedBefore = storage.getItem(STORAGE_KEY);
+
+    client.setToken(token("CCODE1"));
+
+    expect(storage.getItem(STORAGE_KEY)).toBe(persistedBefore);
+  });
+
+  it("ignores and removes expired persisted entries", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    const storage = installLocalStorageMock();
+    const first = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }));
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher: first.fetcher,
+      cache: { ttl: 1, storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await client.can("iam:listUsers");
+
+    vi.setSystemTime(new Date("2026-01-01T00:00:02.000Z"));
+    const second = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: false } } }));
+    const reloaded = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher: second.fetcher,
+      cache: { ttl: 1, storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await expect(reloaded.can("iam:listUsers")).resolves.toBe(false);
+    expect(second.calls).toHaveLength(1);
+    expect(storage.getItem(STORAGE_KEY)).toContain("\"allowed\":false");
+    expect(storage.getItem(STORAGE_KEY)).not.toContain("\"allowed\":true");
+  });
+
+  it("invalidates persisted cache explicitly", async () => {
+    const storage = installLocalStorageMock();
+    const { fetcher } = createFetchMock(() => jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }));
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await client.can("iam:listUsers");
+    expect(storage.getItem(STORAGE_KEY)).toContain("iam:listUsers");
+
+    client.invalidateCache();
+
+    expect(client.getCached("iam:listUsers")).toBeUndefined();
+    expect(storage.getItem(STORAGE_KEY)).toBe("{\"version\":1,\"entries\":{}}");
+  });
+
+  it("invalidates persisted cache by scope", async () => {
+    const storage = installLocalStorageMock();
+    const { fetcher } = createFetchMock(() =>
+      jsonResponse({
+        decisions: {
+          "iam:listUsers": { allowed: true },
+          "billing:listInvoices": { allowed: true },
+        },
+      }),
+    );
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await client.evaluate([{ action: "iam:listUsers" }, { action: "billing:listInvoices" }]);
+    client.invalidateCache("iam");
+
+    const persisted = storage.getItem(STORAGE_KEY);
+    expect(client.getCached("iam:listUsers")).toBeUndefined();
+    expect(client.getCached("billing:listInvoices")).toBe(true);
+    expect(persisted).not.toContain("iam:listUsers");
+    expect(persisted).toContain("billing:listInvoices");
+  });
+
+  it("does not read or write localStorage when cache is disabled", async () => {
+    const storage = installLocalStorageMock();
+    const { fetcher, calls } = createFetchMock(() =>
+      jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }),
+    );
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher,
+      cache: { enabled: false, storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await client.can("iam:listUsers");
+    await client.can("iam:listUsers");
+
+    expect(calls).toHaveLength(2);
+    expect(storage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("falls back to memory cache when localStorage is invalid or unavailable", async () => {
+    const storage = installLocalStorageMock();
+    storage.setItem(STORAGE_KEY, "not json");
+    const { fetcher, calls } = createFetchMock(() =>
+      jsonResponse({ decisions: { "iam:listUsers": { allowed: true } } }),
+    );
+    const client = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await expect(client.can("iam:listUsers")).resolves.toBe(true);
+    await expect(client.can("iam:listUsers")).resolves.toBe(true);
+
+    expect(calls).toHaveLength(1);
+
+    installThrowingLocalStorageMock();
+    const withoutStorage = new IamClient({
+      endpointAuthzBatchEvaluate: "http://iam/frontend/authorizations/evaluate",
+      fetcher,
+      cache: { storage: "localStorage", storageKey: STORAGE_KEY },
+    }).setToken(token());
+
+    await expect(withoutStorage.can("iam:listUsers")).resolves.toBe(true);
+  });
+
   it("tries fallback endpoints only for transport failures", async () => {
     const { fetcher, calls } = createFetchMock((call, index) => {
       if (index === 0) throw new Error("network down");
@@ -120,3 +318,35 @@ describe("frontend authorization", () => {
     ]);
   });
 });
+
+function installLocalStorageMock(): Storage {
+  const items = new Map<string, string>();
+  const storage: Storage = {
+    get length() {
+      return items.size;
+    },
+    clear: vi.fn(() => items.clear()),
+    getItem: vi.fn((key: string) => items.get(key) ?? null),
+    key: vi.fn((index: number) => Array.from(items.keys())[index] ?? null),
+    removeItem: vi.fn((key: string) => {
+      items.delete(key);
+    }),
+    setItem: vi.fn((key: string, value: string) => {
+      items.set(key, value);
+    }),
+  };
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+  return storage;
+}
+
+function installThrowingLocalStorageMock(): void {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    get() {
+      throw new Error("storage unavailable");
+    },
+  });
+}

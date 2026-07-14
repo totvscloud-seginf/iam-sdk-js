@@ -5,6 +5,8 @@ export const DEFAULT_AUTHZ_BATCH_EVALUATE_ENDPOINT = "http://localhost:443/front
 export const DEFAULT_CP_ENDPOINT = "http://localhost:443/v1";
 export const DEFAULT_TIMEOUT_MS = 30_000;
 export const DEFAULT_CACHE_TTL_SECONDS = 300;
+export const DEFAULT_CACHE_STORAGE = "memory";
+export const DEFAULT_CACHE_STORAGE_KEY = "@totvs-cloud/iam-sdk:authz-cache:v1";
 
 export interface NormalizedConfig {
   endpointAuthn: string;
@@ -14,6 +16,8 @@ export interface NormalizedConfig {
   timeoutMs: number;
   cacheTtlSeconds: number;
   cacheEnabled: boolean;
+  cacheStorage: "memory" | "localStorage";
+  cacheStorageKey: string;
   logLevel: LogLevel;
   apiAccessKey: string | undefined;
   apiSecretKey: string | undefined;
@@ -52,6 +56,8 @@ export function normalizeConfig(config: IamClientConfig = {}): NormalizedConfig 
     timeoutMs: config.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     cacheTtlSeconds: config.cache?.ttl ?? DEFAULT_CACHE_TTL_SECONDS,
     cacheEnabled: config.cache?.enabled ?? true,
+    cacheStorage: config.cache?.storage ?? DEFAULT_CACHE_STORAGE,
+    cacheStorageKey: config.cache?.storageKey ?? DEFAULT_CACHE_STORAGE_KEY,
     logLevel: config.logLevel ?? "INFO",
     apiAccessKey: config.apiAccessKey,
     apiSecretKey: config.apiSecretKey,

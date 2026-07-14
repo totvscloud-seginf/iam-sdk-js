@@ -43,7 +43,7 @@ await iam.assumeRole({
 });
 ```
 
-`assumeRole()` and `setToken()` invalidate the authorization cache because the principal changed.
+`assumeRole()` and `setToken()` invalidate the in-memory authorization cache because the principal changed.
 
 ## Frontend Authorization
 
@@ -86,6 +86,29 @@ iam.invalidateCache();
 ```
 
 The default cache TTL is 300 seconds. Batches larger than 50 checks are automatically split because the BFF limit is 50 checks per request.
+
+By default the authorization cache is in memory only. To persist authorization decisions across page reloads, opt in to `localStorage`:
+
+```ts
+const iam = new IamClient({
+  getToken: () => localStorage.getItem("access_token") ?? "",
+  cache: {
+    ttl: 300,
+    storage: "localStorage",
+    storageKey: "my-app:iam-authz-cache",
+  },
+});
+```
+
+Persisted cache entries are namespaced by the current token. If the token stored in `localStorage` changes and the page reloads, the SDK looks up decisions under the new token namespace and does not reuse decisions from the previous token. Old entries remain persisted until they expire by TTL or until `invalidateCache()` is called explicitly.
+
+```ts
+const iam1 = new IamClient({ cache: { storage: "localStorage" } }).setToken(tokenA);
+await iam1.can("iam:listUsers"); // calls the BFF and persists the decision
+
+const iam2 = new IamClient({ cache: { storage: "localStorage" } }).setToken(tokenA);
+await iam2.can("iam:listUsers"); // reuses persisted cache if the TTL is still valid
+```
 
 ## Fallbacks
 

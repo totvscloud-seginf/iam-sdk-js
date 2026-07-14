@@ -30,7 +30,12 @@ export class IamClient {
       fetcher: options.fetcher,
       timeoutMs: this.config.timeoutMs,
     });
-    this.cache = new AuthorizationCache(this.config.cacheTtlSeconds, this.config.cacheEnabled);
+    this.cache = new AuthorizationCache(
+      this.config.cacheTtlSeconds,
+      this.config.cacheEnabled,
+      this.config.cacheStorage,
+      this.config.cacheStorageKey,
+    );
     const tokenProvider = async () => options.getToken ? await options.getToken() : this.token;
     this.authn = new AuthnClient(
       this.config,
@@ -39,7 +44,7 @@ export class IamClient {
       (token) => {
         this.token = token;
       },
-      () => this.invalidateCache(),
+      () => this.cache.invalidateMemory(),
     );
     this.authz = new AuthzClient(this.config, http, this.cache, tokenProvider);
     this.iam = new IamService(this.config, http, tokenProvider);
@@ -47,7 +52,7 @@ export class IamClient {
 
   setToken(token: string): this {
     this.token = token;
-    this.invalidateCache();
+    this.cache.invalidateMemory();
     return this;
   }
 

@@ -5,6 +5,8 @@ export type FetchLike = (input: string | URL | Request, init?: RequestInit) => P
 export interface CacheConfig {
   ttl?: number;
   enabled?: boolean;
+  storage?: "memory" | "localStorage";
+  storageKey?: string;
 }
 
 export interface IamClientConfig {
